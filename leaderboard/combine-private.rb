@@ -1,11 +1,24 @@
 require 'json'
 require 'time'
 
-people = ARGV.flat_map { |a| JSON.parse(File.read(a))['members'].values }
+jsons = ARGV.map { |a| JSON.parse(File.read(a)) }
+people = jsons.flat_map { |j| j['members'].values }
+years = jsons.map { |j| Integer(j['event']) }
+
+raise "mismatching years #{years}" if years.uniq.size > 1
 
 max_day = people.flat_map { |v| v['completion_day_level'].keys }.map(&:to_i).max
 longest_name = people.map { |v| v['name'] || v['id'] }.map(&:size).max
 score = Hash.new(0)
+
+disabled_days = case years[0]
+when 2020
+  [1]
+when 2018
+  [6]
+else
+  []
+end.freeze
 
 (1..max_day).each { |day|
   prev_completing = nil
@@ -16,7 +29,7 @@ score = Hash.new(0)
     }.compact.to_h
     puts "Day #{day} Part #{part}:"
     completing_people.sort_by(&:last).each_with_index { |(p, _), i|
-      score[p] += people.size - i
+      score[p] += (disabled_days.include?(day) ? 0 : people.size - i)
     }
     fmt = [
       "%#{longest_name}s %s",
