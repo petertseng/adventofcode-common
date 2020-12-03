@@ -1,6 +1,13 @@
 require 'time'
 
-def recalculate_private(people)
+def recalculate_private(people, year: nil, disabled_days: nil)
+  disabled_days ||= case year
+  when 2020; [1]
+  when 2018; [6]
+  when nil; $stderr.puts("WARNING: You might want to specify either year or disabled_days"); []
+  else; []
+  end.freeze
+
   max_day = people.flat_map { |v| v['completion_day_level'].keys }.map(&:to_i).max
   longest_name = people.map { |v| v['name'] || v['id'] }.map(&:size).max
   score = Hash.new(0)
@@ -16,7 +23,7 @@ def recalculate_private(people)
       }.compact.to_h.freeze
       puts "Day #{day} Part #{part}:"
       completing_people.sort_by(&:last).each_with_index { |(p, _), i|
-        score[p] += people.size - i
+        score[p] += (disabled_days.include?(day) ? 0 : people.size - i)
       }
       fmt = [
         "%#{longest_name}s %s",
