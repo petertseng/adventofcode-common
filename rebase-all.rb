@@ -2,6 +2,7 @@ branches = `git branch --remotes | grep -v master | grep origin`
 
 good = []
 bad = []
+noop = []
 
 branches.split.each { |branch|
   localname=branch.delete_prefix('origin/')
@@ -19,10 +20,30 @@ branches.split.each { |branch|
     next
   end
   target = targets[0].chomp
-  puts "\e[1;32m#{branch}\e[0m: will rebase on \e[1;33m#{target}\e[0m"
+
+  system("git merge-base --is-ancestor #{target} #{branch}")
+  if $?.exitstatus == 0
+    puts "\e[1;32m#{branch}\e[0m: already has \e[1;33m#{target}\e[0m"
+    noop << branch
+    next
+  else
+    puts "\e[1;32m#{branch}\e[0m: will rebase on \e[1;33m#{target}\e[0m"
+  end
 
   system("git checkout #{localname}")
   system("git rebase -i #{target}")
+
+  remote_ref = `git show-ref #{branch}`.split[0]
+  local_ref = `git show-ref #{localname}`.split[0]
+  puts "\e[1;32m#{branch}\e[0m: remote #{remote_ref} local #{local_ref}"
+
+  if remote_ref == local_ref
+    noop << branch
+    system("git checkout master")
+    system("git branch --delete #{localname}")
+    next
+  end
+
   system("git diff #{branch} HEAD")
 
   puts 'CONFIRM??? (anything starting with n for no, otherwise yes)'
@@ -41,3 +62,4 @@ branches.split.each { |branch|
 
 puts "good #{good.size}: #{good}"
 puts "bad #{bad.size}: #{bad}"
+puts "noop #{noop.size}: #{noop}"
