@@ -2,11 +2,11 @@ def parse_daily_file(txt)
   entries = entries_minus_supporter_tags(txt)
   raise "expect 200 entries, not #{entries.size}" if entries.size != 200
 
-  gold = by_person(entries[0...100].map { |e|
-    parse_daily_entry(e, :gold)
+  gold = by_person(entries[0...100].map { |id, e|
+    parse_daily_entry(id, e, :gold)
   })
-  silver = by_person(entries[100...200].map { |e|
-    parse_daily_entry(e, :silver)
+  silver = by_person(entries[100...200].map { |id, e|
+    parse_daily_entry(id, e, :silver)
   })
 
   combined = gold.merge(silver) { |k, v1, v2| v1.merge(v2) }.values.map(&:dup)
@@ -28,13 +28,14 @@ def parse_daily_file(txt)
 end
 
 def entries_minus_supporter_tags(file_content)
-  file_content.scan(%r{<div class="leaderboard-entry">(.+?)</div>}).map { |e|
-    # Be careful removing this </a>
-    # A single </a> ends both the supporter and userpic/name <a> tags.
-    # So AoC supporter will have $ instead of </a> at the end of their name.
-    e.first.gsub(%r{ <a href="/20../support" class="supporter-badge" title="Advent of Code Supporter">\(AoC\+\+\)</a>}, '')
-      .gsub(%r{ <a href="[^"]+" target="_blank" onclick="[^"]+" class="sponsor-badge" title="Member of sponsor: .*">\(Sponsor\)</a>}, '')
-  }
+  file_content.scan(%r{<div class="leaderboard-entry" data-user-id="(\d+)">(.+?)</div>}).map { |id, e|
+    [
+      Integer(id),
+      # Remove supporter and sponsor tag
+      e.gsub(%r{ <a href="/20../support" class="supporter-badge" title="Advent of Code Supporter">\(AoC\+\+\)</a>}, '')
+        .gsub(%r{ <a href="[^"]+" target="_blank" onclick="[^"]+" class="sponsor-badge" title="Member of sponsor: .*">\(Sponsor\)</a>}, '')
+    ].freeze
+  }.freeze
 end
 
 def parse_person(txt)
@@ -58,13 +59,14 @@ def parse_person(txt)
   end
 end
 
-def parse_daily_entry(e, type)
+def parse_daily_entry(id, e, type)
   # Assumption: It NEVER takes more than 24 hours for the leaderboard to fill.
   h, m, s = e.match(%r{<span class="leaderboard-time">Dec\s+\d\d\s+([\d:]+)})[1].split(?:).map(&:to_i)
   time = h * 3600 + m * 60 + s
   rank = Integer(e.match(%r{<span class="leaderboard-position">\s*(\d+)\)})[1])
   after_leaderboard_time = e.match(%r{<span class="leaderboard-time">[^<]+</span>(.*)})[1]
   {
+    id: id,
     person: parse_person(after_leaderboard_time),
     score: 101 - rank,
     rank: rank,
@@ -75,7 +77,7 @@ def parse_daily_entry(e, type)
 end
 
 def by_person(entries)
-  entries.group_by { |e| e[:person] }.transform_values { |vs|
+  entries.group_by { |e| e[:id] }.transform_values { |vs|
     raise "#{vs} not unique" if vs.size != 1
     vs[0]
   }
