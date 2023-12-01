@@ -19,7 +19,7 @@ In any such directory:
 
 * Tests for a day start with the zero-padded day number, then any arbitrary string afterward.
 * An input file ending in .in may be given, or argv arguments may be given in a file ending in .argv.
-  Behaviour if both are provided is unspecified but the test runner currently does not respect both.
+  If both are provided, the test runner will treat the two as a single test, passing both the file and the arguments.
 * Corresponding output file ends in .out.
 
 For example a test might be sample-cases/2015/01a.in and sample-cases/2015/01a.out
