@@ -50,18 +50,19 @@ def test_and_exit(args = ARGV)
         }
       }
     else
-      matching_inputs.map { |infile|
-        test_type = File.basename(File.dirname(File.dirname(infile))).split(?-).first
-        argv = if infile.end_with?('.in')
-          infile
-        elsif infile.end_with?('.argv')
-          File.read(infile).chomp
-        else raise "bad infile #{infile}"
-        end
+      matching_inputs.group_by { |v| v[0...v.rindex(?.)] }.map { |without_ext, with_exts|
+        test_type = File.basename(File.dirname(File.dirname(without_ext))).split(?-).first
+        argv = with_exts.map { |infile|
+          if infile.end_with?('.in')
+            infile
+          elsif infile.end_with?('.argv')
+            File.read(infile).chomp
+          end
+        }.join(' ')
         {
-          name: "#{test_type}/#{File.basename(infile)}",
+          name: "#{test_type}/#{File.basename(without_ext)}",
           argv: argv,
-          output: infile.sub(/\.(in|argv)$/, '.out'),
+          output: without_ext + '.out',
         }
       }
     end
