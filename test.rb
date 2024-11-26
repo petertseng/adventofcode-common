@@ -6,7 +6,7 @@ TEST_TYPES = %w(secret sample).select { |test_type| File.directory?("#{__dir__}/
 JOINABLE = Object.new
 def JOINABLE.join; end
 
-def test_and_exit(args = ARGV)
+def test_and_exit(args = ARGV, dir: __dir__)
   all_good = true
 
   if args.include?('--')
@@ -37,11 +37,11 @@ def test_and_exit(args = ARGV)
       next []
     end
 
-    matching_inputs = test_types.flat_map { |test_type| Dir.glob("#{__dir__}/#{test_type}-cases/#{YEAR}/#{daypad}*.{in,argv}") }.sort
+    matching_inputs = test_types.flat_map { |test_type| Dir.glob("#{dir}/#{test_type}-cases/#{YEAR}/#{daypad}*.{in,argv}") }.sort
 
     cases = if matching_inputs.empty?
       puts "no matching inputs for #{daypad}? Will try with no args?"
-      matching_outputs = test_types.flat_map { |test_type| Dir.glob("#{__dir__}/#{test_type}-cases/#{YEAR}/#{daypad}*.out") }.sort
+      matching_outputs = test_types.flat_map { |test_type| Dir.glob("#{dir}/#{test_type}-cases/#{YEAR}/#{daypad}*.out") }.sort
       matching_outputs.map { |outfile|
         {
           name: daypad,
