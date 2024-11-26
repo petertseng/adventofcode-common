@@ -1,7 +1,12 @@
 require 'time'
 
-YEAR = Integer(Dir.pwd.scan(/\d+/).last)
-TEST_TYPES = %w(secret sample).select { |test_type| File.directory?("#{__dir__}/#{test_type}-cases/#{YEAR}") }.map(&:freeze).freeze
+if Dir.pwd.include?('adventofcode')
+  YEAR = Integer(Dir.pwd.scan(/\d+/).last)
+  TEST_TYPES = %w(secret sample).select { |test_type| File.directory?("#{__dir__}/#{test_type}-cases/#{YEAR}") }.map(&:freeze).freeze
+else
+  YEAR = ?..freeze
+  TEST_TYPES = %w(secret sample).freeze
+end
 
 JOINABLE = Object.new
 def JOINABLE.join; end
