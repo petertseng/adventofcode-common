@@ -1,4 +1,5 @@
 require 'time'
+require 'thread'
 
 if Dir.pwd.include?('adventofcode')
   YEAR = Integer(Dir.pwd.scan(/\d+/).last)
@@ -14,8 +15,6 @@ JOINABLE = Object.new
 def JOINABLE.join; end
 
 def test_and_exit(args = ARGV, dir: __dir__)
-  all_good = true
-
   if args.include?('--')
     i = args.index('--')
     pass_args = args.drop(i + 1)
@@ -36,6 +35,9 @@ def test_and_exit(args = ARGV, dir: __dir__)
   puts "testing #{test_types} cases in #{parallel ? 'parallel' : 'sequence'}"
 
   to_test = args.empty? ? 1..MAX_DAY : args.map(&method(:Integer))
+
+  fail_by_day = Hash.new(0)
+  fail_lock = Mutex.new
 
   ran = to_test.flat_map { |day|
     daypad = day.to_s.rjust(2, ?0)
@@ -77,25 +79,22 @@ def test_and_exit(args = ARGV, dir: __dir__)
     run = ->(c) {
       diff_command = "#{command} #{c[:argv]} #{pass_args.join(' ')} | diff -u - #{c[:output]}"
       start_time = Time.now
-      if system(diff_command)
-        puts "#{c[:name]} passed in #{Time.now - start_time}"
-      else
-        puts "#{c[:name]} failed in #{Time.now - start_time}"
-        puts diff_command
-        all_good = false
-      end
+      system(diff_command).tap { |success|
+        puts "#{c[:name]} #{success ? :pass : :fail}ed in #{Time.now - start_time}"
+        puts diff_command unless success
+      }
     }
 
     if parallel
       cases.map { |c|
         {
           day: day,
-          join: Thread.new { run[c] }
+          join: Thread.new { fail_lock.synchronize { fail_by_day[day] += 1 } unless run[c] }
         }
       }
     else
       cases.map { |c|
-        run[c]
+        fail_by_day[day] += 1 unless run[c]
         {
           day: day,
           join: JOINABLE,
@@ -105,7 +104,10 @@ def test_and_exit(args = ARGV, dir: __dir__)
   }
 
   ran.each { |r| r[:join].join }
-  puts "ran #{ran.size} from #{ran.uniq { |r| r[:day] }.size} days, #{all_good ? "\e[1;32mGOOD!\e[0m" : "\e[1;31mBAD!\e[0m"}"
+  fails = fail_by_day.values.sum
+  successes = ran.size - fails
+  all_good = fails == 0
+  puts "ran #{ran.size} from #{ran.uniq { |r| r[:day] }.size} days #{all_good ? "\e[1;32m#{successes}/#{ran.size} pass\e[0m" : "#{successes}/#{ran.size} pass \e[1;31m#{fails}/#{ran.size} fail\e[0m (from #{fail_by_day.size} days)"}"
 
   Kernel.exit(all_good ? 0 : 1)
 end
