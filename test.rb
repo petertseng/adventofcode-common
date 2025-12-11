@@ -3,9 +3,11 @@ require 'time'
 if Dir.pwd.include?('adventofcode')
   YEAR = Integer(Dir.pwd.scan(/\d+/).last)
   TEST_TYPES = %w(secret sample).select { |test_type| File.directory?("#{__dir__}/#{test_type}-cases/#{YEAR}") }.map(&:freeze).freeze
+  MAX_DAY = YEAR >= 2025 ? 12 : 25
 else
   YEAR = ?..freeze
   TEST_TYPES = %w(secret sample).freeze
+  MAX_DAY = 20
 end
 
 JOINABLE = Object.new
@@ -33,7 +35,7 @@ def test_and_exit(args = ARGV, dir: __dir__)
 
   puts "testing #{test_types} cases in #{parallel ? 'parallel' : 'sequence'}"
 
-  to_test = args.empty? ? 1..25 : args.map(&method(:Integer))
+  to_test = args.empty? ? 1..MAX_DAY : args.map(&method(:Integer))
 
   ran = to_test.flat_map { |day|
     daypad = day.to_s.rjust(2, ?0)
